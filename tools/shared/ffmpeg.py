@@ -1,0 +1,48 @@
+"""
+tools/shared/ffmpeg.py — Shared ffmpeg utilities.
+
+Responsibilities:
+  - Verify ffmpeg is on PATH before any media operation.
+  - Extract audio from any media file to a 16 kHz mono WAV for downstream processing.
+
+Used by: tools.media.video_to_edl, tools.media.audio_to_srt
+"""
+
+import shutil
+import subprocess
+import sys
+
+from rich.console import Console
+
+console = Console()
+
+
+def check_ffmpeg() -> None:
+    """Exit with a clear message if ffmpeg is not found on PATH."""
+    if shutil.which("ffmpeg") is None:
+        console.print(
+            "[bold red]Error:[/bold red] ffmpeg was not found on your PATH.\n"
+            "Please install ffmpeg (e.g. `brew install ffmpeg` on macOS) and try again."
+        )
+        sys.exit(1)
+
+
+def extract_audio(input_path: str, wav_path: str) -> None:
+    """Extract/convert input_path to a 16 kHz mono WAV file at wav_path.
+
+    Args:
+        input_path: Path to any ffmpeg-supported media file.
+        wav_path:   Destination path for the WAV output.
+
+    Side effects:
+        Writes a WAV file to wav_path. Prints progress to the terminal.
+        Raises subprocess.CalledProcessError if ffmpeg exits non-zero.
+    """
+    console.print(f"[cyan]Extracting audio from[/cyan] {input_path} …")
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", input_path, "-ar", "16000", "-ac", "1", "-f", "wav", wav_path],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=True,
+    )
+    console.print(f"[green]Audio extracted →[/green] {wav_path}")

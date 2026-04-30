@@ -1,0 +1,18 @@
+[project]
+name = "tools"
+version = "0.1.0"
+description = "Personal CLI toolkit — a single `tools` command with grouped subcommands."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "typer>=0.15",
+    "rich>=13",
+    "openai-whisper",
+]
+
+[project.scripts]
+tools = "tools.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

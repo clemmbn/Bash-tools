@@ -36,9 +36,24 @@ def extract_audio(input_path: str, wav_path: str) -> None:
 
     Side effects:
         Writes a WAV file to wav_path. Prints progress to the terminal.
-        Raises subprocess.CalledProcessError if ffmpeg exits non-zero.
+        Raises SystemExit if the file has no audio stream.
+        Raises subprocess.CalledProcessError if ffmpeg exits non-zero for other reasons.
     """
     console.print(f"[cyan]Extracting audio from[/cyan] {input_path} …")
+
+    # Probe for audio streams before attempting extraction to give a clear error
+    # instead of a cryptic CalledProcessError when the file is video-only.
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries",
+         "stream=codec_type", "-of", "csv=p=0", input_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    if not probe.stdout.strip():
+        console.print(f"[bold red]Error:[/bold red] {input_path} has no audio stream.")
+        sys.exit(1)
+
     subprocess.run(
         ["ffmpeg", "-y", "-i", input_path, "-ar", "16000", "-ac", "1", "-f", "wav", wav_path],
         stdout=subprocess.DEVNULL,

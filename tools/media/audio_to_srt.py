@@ -212,8 +212,8 @@ def _validate_model(value: str) -> str:
 @media_app.command("audio-to-srt")
 def audio_to_srt(
     input_file: Annotated[Path, typer.Argument(help="Input audio or video file (MP3, MP4, MOV, WAV, M4A, AAC).")],
-    model: Annotated[str, typer.Option(help=f"Whisper model size. Choices: {', '.join(_MODEL_CHOICES)}.", callback=_validate_model, is_eager=False)] = "medium",
-    max_line_width: Annotated[int, typer.Option(help="Maximum characters per subtitle line.")] = 15,
+    model: Annotated[str, typer.Option(help=f"Whisper model size. Choices: {', '.join(_MODEL_CHOICES)}.", callback=_validate_model, is_eager=False)] = "turbo",
+    max_line_width: Annotated[int, typer.Option(help="Maximum characters per subtitle line.")] = 10,
     silence_threshold: Annotated[float, typer.Option(help="Silence gap in seconds that forces a new caption block.")] = 0.5,
     max_lines: Annotated[int, typer.Option(help="Maximum lines per caption block.")] = 1,
 ) -> None:

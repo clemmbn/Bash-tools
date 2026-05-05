@@ -26,5 +26,9 @@ if [[ "$EXT_LOWER" != "mp4" && "$EXT_LOWER" != "mov" ]]; then
   exit 1
 fi
 
+# Raycast runs with a minimal PATH; uv tool installs land in ~/.local/bin
+# and Homebrew binaries (ffmpeg) live in /opt/homebrew/bin.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
+
 # NO_COLOR suppresses Rich ANSI codes so Raycast's output window stays readable.
 NO_COLOR=1 tools media video-to-edl "$FILE"

@@ -88,7 +88,8 @@ Transcribes an audio or video file locally using [OpenAI Whisper](https://github
 1. Convert input to a 16 kHz mono WAV (skipped if already `.wav`).
 2. Transcribe with local Whisper using word-level timestamps.
 3. Group words into caption blocks, breaking on silence gaps and sentence-ending punctuation.
-4. Write `<input>.srt`.
+4. Fill sub-threshold gaps between consecutive blocks by snapping both boundaries to their midpoint.
+5. Write `<input>.srt`.
 
 **Usage:**
 ```bash
@@ -109,6 +110,7 @@ tools media audio-to-srt <input_file> [OPTIONS]
 | `--max-line-width` | `10` | Maximum characters per subtitle line. |
 | `--silence-threshold` | `0.5` | Silence gap in seconds that forces a new caption block. |
 | `--max-lines` | `1` | Maximum number of lines per caption block. |
+| `--min-gap` | `0.1` | Minimum gap in seconds allowed between two consecutive subtitle blocks. Gaps shorter than this are eliminated by extending both blocks to meet at the midpoint. Set to `0.0` to disable. |
 
 **Model comparison:**
 
@@ -134,6 +136,9 @@ tools media audio-to-srt podcast.mp3 --max-line-width 40 --max-lines 2
 
 # Faster transcription for a quick draft
 tools media audio-to-srt clip.mov --model small
+
+# Eliminate gaps shorter than 150 ms between subtitle blocks
+tools media audio-to-srt interview.mp4 --min-gap 0.15
 ```
 
 **Output:** `<input>.srt` in the same directory as the input file.

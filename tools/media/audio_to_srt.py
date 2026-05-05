@@ -85,12 +85,45 @@ def merge_tokens(words: list[dict]) -> list[dict]:
     return result
 
 
+def _fill_short_gaps(
+    blocks: list[tuple[str, float, float]],
+    min_gap: float,
+) -> list[tuple[str, float, float]]:
+    """Eliminate sub-threshold gaps between consecutive subtitle blocks.
+
+    When the silence between two blocks is shorter than min_gap, the gap is split
+    at the midpoint: the first block's end is extended forward and the second
+    block's start is pulled backward so they meet at that midpoint with no gap.
+
+    Args:
+        blocks:  List of (text, start, end) tuples in chronological order.
+        min_gap: Minimum allowed gap in seconds between consecutive blocks.
+
+    Returns:
+        New list of (text, start, end) tuples with short gaps eliminated.
+    """
+    if len(blocks) < 2:
+        return list(blocks)
+
+    result = list(blocks)
+    for i in range(len(result) - 1):
+        text_a, start_a, end_a = result[i]
+        text_b, start_b, end_b = result[i + 1]
+        gap = start_b - end_a
+        if 0 < gap < min_gap:
+            mid = (end_a + start_b) / 2
+            result[i] = (text_a, start_a, mid)
+            result[i + 1] = (text_b, mid, end_b)
+    return result
+
+
 def write_srt(
     result: dict,
     output_path: str,
     max_line_width: int,
     silence_threshold: float,
     max_lines: int,
+    min_gap: float,
 ) -> None:
     """Group Whisper word timestamps into caption blocks and write an SRT file.
 
@@ -104,12 +137,17 @@ def write_srt(
     Lines break when adding the next word would exceed max_line_width characters,
     preferring to split at the most recent punctuation within the current line.
 
+    After all blocks are collected, consecutive pairs with a gap shorter than
+    min_gap are merged at their midpoint so no short silence appears.
+
     Args:
         result:            Whisper result dict from transcribe().
         output_path:       Destination path for the .srt file.
         max_line_width:    Maximum characters per subtitle row.
         silence_threshold: Gap in seconds that triggers a new caption block.
         max_lines:         Maximum number of rows per caption block.
+        min_gap:           Minimum gap in seconds allowed between two blocks;
+                           shorter gaps are filled by splitting at the midpoint.
     """
     SENTENCE_PUNCT = {'.', '!', '?'}
     BREAK_PUNCT = {',', ';', '.', '!', '?'}
@@ -187,6 +225,8 @@ def write_srt(
     if any(line for line in current_lines if line):
         emit_block(current_lines, block_start, last_end)
 
+    blocks = _fill_short_gaps(blocks, min_gap)
+
     srt_lines: list[str] = []
     for idx, (text, start, end) in enumerate(blocks, start=1):
         srt_lines.append(str(idx))
@@ -216,6 +256,7 @@ def audio_to_srt(
     max_line_width: Annotated[int, typer.Option(help="Maximum characters per subtitle line.")] = 10,
     silence_threshold: Annotated[float, typer.Option(help="Silence gap in seconds that forces a new caption block.")] = 0.5,
     max_lines: Annotated[int, typer.Option(help="Maximum lines per caption block.")] = 1,
+    min_gap: Annotated[float, typer.Option(help="Minimum gap in seconds between subtitle blocks; shorter gaps are filled by splitting at the midpoint.")] = 0.2,
 ) -> None:
     """Transcribe an audio/video file and generate an SRT subtitle file."""
     check_ffmpeg()
@@ -243,7 +284,7 @@ def audio_to_srt(
             console.print("[yellow]No speech detected — no SRT file written.[/yellow]")
             return
 
-        write_srt(result, str(output_path), max_line_width, silence_threshold, max_lines)
+        write_srt(result, str(output_path), max_line_width, silence_threshold, max_lines, min_gap)
 
     finally:
         if tmp_wav:
